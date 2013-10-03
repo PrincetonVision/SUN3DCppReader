@@ -5,6 +5,7 @@
  *      Author: alan
  */
 
+#include <pwd.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -79,8 +80,10 @@ int main(int argc, char **argv) {
   string local_dir;
 
   if (argc == 1) {
+    passwd* pw = getpwuid(getuid());
+    std::string home_dir(pw->pw_dir);
     sequence_name = "hotel_umd/maryland_hotel3/";
-    local_dir     = "/home/alan/DATA/SUN3D/" + sequence_name;
+    local_dir     = home_dir + "/" + sequence_name;
   } else if (argc == 3) {
     sequence_name = argv[1];
     local_dir     = argv[2];
