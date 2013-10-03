@@ -1,0 +1,32 @@
+
+***** CopySUN3D *****
+
+Copy files from server:
+	http://sun3d.csail.mit.edu/data/
+Copied files include:
+	intrinsics.txt
+	image/*.jpg
+	depth/*.png
+
+
+
+Usage:
+
+1) CopySUN3D (Enter)
+	Copy from: http://sun3d.csail.mit.edu/data/hotel_umd/maryland_hotel3/
+	Coyy to  : /home/alan/DATA/SUN3D/
+
+2) CopySUN3D remote_dir local_dir (Enter)
+	Copy from: http://sun3d.csail.mit.edu/data/remote_dir
+	Copy to  : local_dir
+	Example  : CopySUN3D hotel_umd/maryland_hotel3/ /home/alan/
+
+
+
+Dependency:
+	curl
+	http://curl.haxx.se/
+	Install in Ubuntu: sudo apt-get install libcurl4-gnutls-dev
+
+
+
