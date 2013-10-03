@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
     passwd* pw = getpwuid(getuid());
     std::string home_dir(pw->pw_dir);
     sequence_name = "hotel_umd/maryland_hotel3/";
-    local_dir     = home_dir + "/" + sequence_name;
+    local_dir     = home_dir + "/DATA/SUN3D/" + sequence_name;
   } else if (argc == 3) {
     sequence_name = argv[1];
     local_dir     = argv[2];
