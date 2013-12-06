@@ -14,13 +14,13 @@ test
 Usage:
 
 1) ./CopySUN3D (Enter)
-	Copy from: http://sun3d.csail.mit.edu/data/hotel_umd/maryland_hotel3/
+	Copy from: http://sun3d.csail.mit.edu/data/harvard_c8/hv_c8_3/
 	Coyy to  : $HOME/DATA/SUN3D/hotel_umd/maryland_hotel3/
 
 2) ./CopySUN3D remote_dir local_dir (Enter)
 	Copy from: http://sun3d.csail.mit.edu/data/remote_dir
 	Copy to  : local_dir
-	Example  : CopySUN3D hotel_umd/maryland_hotel3/ /home/USER_NAME/DATA/SUN3D/
+	Example  : CopySUN3D harvard_c8/hv_c8_3/ /home/USER_NAME/DATA/SUN3D/
 
 
 

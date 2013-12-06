@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project{ReadSUN3DCpp)
+project(ReadSUN3DCpp)
 
 find_package(CURL)
 
