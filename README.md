@@ -1,4 +1,4 @@
-***** CopySUN3D *****
+## SUN3DCppReader
 
 Copy files from server:
 	http://sun3d.csail.mit.edu/data/
