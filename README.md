@@ -22,9 +22,9 @@ Copied files include:
 	Coyy to  : $HOME/data/sun3d/harvard_c11/hv_c11_2/
 ```
 
-2. ./CopySUN3D remote_dir local_dir (Enter)
+2. ./CopySUN3D sequence_name local_dir (Enter)
 ```
-	Copy from: http://sun3d.csail.mit.edu/data/remote_dir
+	Copy from: http://sun3d.csail.mit.edu/data/sequence_name
 	Copy to  : local_dir
 	Example  : CopySUN3D harvard_c11/hv_c11_2/ /home/USER_NAME/data/sun3d/
 ```
