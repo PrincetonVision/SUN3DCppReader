@@ -1,3 +1,5 @@
+// This code is a demo to download data from the SUN3D server (http://sun3d.csail.mit.edu/data/) and load the data in C++.
+
 #include <pwd.h>
 #include <iostream>
 #include <string>
