@@ -3,16 +3,10 @@
 This code is a demo to download data from the SUN3D server (http://sun3d.csail.mit.edu/data/) and load the data in C++. 
 ## Usage
 
-1. ./CopySUN3D (Enter)
+./CopySUN3D sequence_name local_dir (Enter)
 ```
-	Copy from: http://sun3d.csail.mit.edu/data/harvard_c8/hv_c8_3/
-	Coyy to  : $HOME/data/sun3d/harvard_c11/hv_c11_2/
-```
-
-2. ./CopySUN3D sequence_name local_dir (Enter)
-```
-	Copy from: http://sun3d.csail.mit.edu/data/sequence_name
-	Copy to  : local_dir
+	Copy from: http://sun3d.csail.mit.edu/data/sequence_name (default value is harvard_c8/hv_c8_3/)
+	Copy to  : local_dir (default value is  $HOME/data/sun3d/harvard_c11/hv_c11_2/)
 	Example  : CopySUN3D harvard_c11/hv_c11_2/ /home/USER_NAME/data/sun3d/
 ```
 
