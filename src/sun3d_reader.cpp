@@ -1,10 +1,3 @@
-/*
- * copy_sun3d.cpp
- *
- *  Created on: Oct 2, 2013
- *      Author: alan
- */
-
 #include <pwd.h>
 #include <iostream>
 #include <string>
