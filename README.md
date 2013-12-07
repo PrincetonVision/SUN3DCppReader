@@ -7,8 +7,11 @@ Copy files from server:
 	
 	
 Copied files include:
+
 1. intrinsics.txt
+
 2. image/*.jpg
+
 3. depth/*.png
 
 ## Usage
