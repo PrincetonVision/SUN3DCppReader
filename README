@@ -27,7 +27,13 @@ Usage:
 Dependency:
 	curl
 	http://curl.haxx.se/
-	Install in Ubuntu: sudo apt-get install libcurl4-gnutls-dev
+	Ubuntu: sudo apt-get install libcurl4-gnutls-dev
+
+	jpeg
+	Ubuntu: sudo apt-get install libjpeg-turbo8-dev
+
+	png
+	Ubuntu: sudo apt-get install libpng++-dev
 
 
 
