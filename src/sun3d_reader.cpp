@@ -385,7 +385,6 @@ void DataLocalProcess(string local_dir) {
   string local_image     = local_dir + "image/";
   string local_depth     = local_dir + "depth/";
   string local_ply       = local_dir + "ply/";
-  string local_depth_sub = local_dir + "depthSub/";
   string local_extrinsic = local_dir + "extrinsics/";
 
   SystemCommand( "mkdir -p " + local_ply);
@@ -442,7 +441,6 @@ void DataLocalProcess(string local_dir) {
         depth_list[i].size() - kFileNameLength, kFileNameLength);
     string ply_full_name = local_ply +
         depth_serial_name.substr(0, kFileNameLength - 4) + ".ply";
-    string depth_full_name_sub = local_depth_sub + depth_serial_name;
 
     WritePlyFile(fp, extrinsic_poses[i], image_data, depth_data);
   }
