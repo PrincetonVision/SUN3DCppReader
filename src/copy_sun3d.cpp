@@ -101,8 +101,8 @@ void WriteNames(CURL *curl, vector<string> *file_i, vector<string> *file_o) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void ServerToLocal(
-    CURL *curl, string server_dir, string ext, string local_dir) {
+void ServerToLocal( CURL *curl,
+    string server_dir, const string &ext, const string &local_dir) {
   vector<string> file_i;
   vector<string> file_o;
 
@@ -116,7 +116,8 @@ void ServerToLocal(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void DataFromServerToLocal(string sequence_name, string local_dir) {
+void DataFromServerToLocal(const string &sequence_name,
+                           const string &local_dir) {
   string sun3d_path   = "http://sun3d.csail.mit.edu/data/" + sequence_name;
 
   string sun3d_camera = sun3d_path + "intrinsics.txt";
@@ -153,7 +154,7 @@ void DataFromServerToLocal(string sequence_name, string local_dir) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void GetFileNames(const string dir, vector<string> *file_list) {
+void GetLocalFileNames(const string &dir, vector<string> *file_list) {
   DIR *dp;
   struct dirent *dirp;
   if((dp  = opendir(dir.c_str())) == NULL) {
@@ -183,9 +184,16 @@ const int kFileNameLength = 24;
 typedef unsigned char uchar;
 typedef unsigned short ushort;
 
+struct _cam_k {
+  float fx;
+  float fy;
+  float cx;
+  float cy;
+} cam_K;
+
 ////////////////////////////////////////////////////////////////////////////////
 
-bool GetDepthData(string file_name, ushort *data) {
+bool GetDepthData(const string &file_name, ushort *data) {
   png::image< png::gray_pixel_16 > img(file_name.c_str(),
       png::require_color_space< png::gray_pixel_16 >());
 
@@ -203,7 +211,7 @@ bool GetDepthData(string file_name, ushort *data) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-bool GetImageData(string file_name, uchar *data) {
+bool GetImageData(const string &file_name, uchar *data) {
   unsigned char *raw_image = NULL;
 
   struct jpeg_decompress_struct cinfo;
@@ -227,6 +235,7 @@ bool GetImageData(string file_name, uchar *data) {
       cinfo.output_width * cinfo.output_height * cinfo.num_components);
   row_pointer[0] = (unsigned char *) malloc(
       cinfo.output_width * cinfo.num_components);
+
   while (cinfo.output_scanline < cinfo.image_height) {
     jpeg_read_scanlines(&cinfo, row_pointer, 1);
     for (uint i = 0; i < cinfo.image_width * cinfo.num_components; i++)
@@ -253,7 +262,7 @@ bool GetImageData(string file_name, uchar *data) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void SaveDepthFile(string file_name, ushort *data) {
+void SaveDepthFile(const string &file_name, ushort *data) {
   cout << file_name << endl;
 
   png::image<png::gray_pixel_16> img(kImageColsSub, kImageRowsSub);
@@ -284,6 +293,51 @@ void DataSubSampling(uchar *i, uchar *i_sub, ushort *d, ushort *d_sub) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void WritePlyFile(const string file_name, uchar *image, ushort *depth) {
+  cout << file_name << endl;
+
+  FILE *fp = fopen(file_name.c_str(), "w");
+  fprintf(fp, "ply\n");
+  fprintf(fp, "format binary_little_endian 1.0\n");
+  fprintf(fp, "element vertex %d\n", kImageRows * kImageCols);
+  fprintf(fp, "property float x\n");
+  fprintf(fp, "property float y\n");
+  fprintf(fp, "property float z\n");
+  fprintf(fp, "property uchar red\n");
+  fprintf(fp, "property uchar green\n");
+  fprintf(fp, "property uchar blue\n");
+  fprintf(fp, "end_header\n");
+
+  for (int v = 0; v < kImageRows; ++v) {
+    for (int u = 0; u < kImageCols; ++u) {
+      float iz = *(depth + v * kImageCols + u) / 1000.f;
+      float ix = iz * (u - cam_K.cx) / cam_K.fx;
+      float iy = iz * (v - cam_K.cy) / cam_K.fy;
+
+      float x, y, z;
+      z = -iz;
+      x =  ix;
+      y = -iy;
+
+      fwrite(&x, sizeof(float), 1, fp);
+      fwrite(&y, sizeof(float), 1, fp);
+      fwrite(&z, sizeof(float), 1, fp);
+
+      uchar r = *(image + kImageChannels * (v * kImageCols + u) + 0);
+      uchar g = *(image + kImageChannels * (v * kImageCols + u) + 1);
+      uchar b = *(image + kImageChannels * (v * kImageCols + u) + 2);
+
+      fwrite(&r, sizeof(uchar), 1, fp);
+      fwrite(&g, sizeof(uchar), 1, fp);
+      fwrite(&b, sizeof(uchar), 1, fp);
+    }
+  }
+
+  fclose(fp);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void DataLocalProcess(string local_dir) {
   string local_camera    = local_dir + "intrinsics.txt";
   string local_image     = local_dir + "image/";
@@ -295,19 +349,19 @@ void DataLocalProcess(string local_dir) {
   SystemCommand( "mkdir -p " + local_depth_sub);
 
   int i_ret;
-  float fx, fy, cx, cy, ff;
+  float ff;
   FILE *fp = fopen(local_camera.c_str(), "r");
-  i_ret = fscanf(fp, "%f", &fx);
+  i_ret = fscanf(fp, "%f", &cam_K.fx);
   i_ret = fscanf(fp, "%f", &ff);
-  i_ret = fscanf(fp, "%f", &cx);
+  i_ret = fscanf(fp, "%f", &cam_K.cx);
   i_ret = fscanf(fp, "%f", &ff);
-  i_ret = fscanf(fp, "%f", &fy);
-  i_ret = fscanf(fp, "%f", &cy);
+  i_ret = fscanf(fp, "%f", &cam_K.fy);
+  i_ret = fscanf(fp, "%f", &cam_K.cy);
 
   vector<string> image_list;
   vector<string> depth_list;
-  GetFileNames(local_image, &image_list);
-  GetFileNames(local_depth, &depth_list);
+  GetLocalFileNames(local_image, &image_list);
+  GetLocalFileNames(local_depth, &depth_list);
 
   int total_files = 0;
   image_list.size() < depth_list.size() ?
@@ -323,17 +377,21 @@ void DataLocalProcess(string local_dir) {
   ushort *depth_data_sub = (ushort *) malloc(
       kImageRowsSub * kImageColsSub * sizeof(ushort));
 
+  cout << "Write PLY file -->" << endl;
+
   for (int i = 0; i < total_files; ++i) {
     GetImageData(image_list[i], image_data);
     GetDepthData(depth_list[i], depth_data);
 
     string depth_serial_name = depth_list[i].substr(
         depth_list[i].size() - kFileNameLength, kFileNameLength);
-    string ply_full_name = local_ply + depth_serial_name;
+    string ply_full_name = local_ply +
+        depth_serial_name.substr(0, kFileNameLength - 4) + ".ply";
     string depth_full_name_sub = local_depth_sub + depth_serial_name;
 
-    DataSubSampling(image_data, image_data_sub, depth_data, depth_data_sub);
-    SaveDepthFile(depth_full_name_sub, depth_data_sub);
+//    DataSubSampling(image_data, image_data_sub, depth_data, depth_data_sub);
+//    SaveDepthFile(depth_full_name_sub, depth_data_sub);
+    WritePlyFile(ply_full_name, image_data, depth_data);
   }
 
   free(image_data);
@@ -361,7 +419,7 @@ int main(int argc, char **argv) {
     cout << "Server and local directories are needed." << endl;
   }
 
-//  DataFromServerToLocal(sequence_name, local_dir);
+  DataFromServerToLocal(sequence_name, local_dir);
   DataLocalProcess(local_dir);
 
   return 0;
