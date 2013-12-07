@@ -1,11 +1,15 @@
 ## SUN3DCppReader
 
+This code is a demo to download data from the SUN3D website and load the data in C++. 
+
 Copy files from server:
 	http://sun3d.csail.mit.edu/data/
+	
+	
 Copied files include:
-	intrinsics.txt
-	image/*.jpg
-	depth/*.png
+1. intrinsics.txt
+2. image/*.jpg
+3. depth/*.png
 
 ## Usage
 
