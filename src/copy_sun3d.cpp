@@ -175,11 +175,11 @@ void GetLocalFileNames(const string &dir, vector<string> *file_list) {
 
 const int kImageRows = 480;
 const int kImageCols = 640;
-const int kSampleFactor = 2;
-const int kImageRowsSub = kImageRows / kSampleFactor;
-const int kImageColsSub = kImageCols / kSampleFactor;
+const int kSampleFactor = 30;
 const int kImageChannels = 3;
 const int kFileNameLength = 24;
+const int kTimeStampPos = 8;
+const int kTimeStampLength = 12;
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -190,6 +190,11 @@ struct _cam_k {
   float cx;
   float cy;
 } cam_K;
+
+typedef struct _extrinsic {
+  float R[3][3];
+  float t[3];
+} extrinsic;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -262,44 +267,33 @@ bool GetImageData(const string &file_name, uchar *data) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void SaveDepthFile(const string &file_name, ushort *data) {
-  cout << file_name << endl;
+void GetExtrinsicData(const string &file_name, int size,
+                      vector<extrinsic> *poses) {
+  FILE *fp = fopen(file_name.c_str(), "r");
 
-  png::image<png::gray_pixel_16> img(kImageColsSub, kImageRowsSub);
-
-  for (int i = 0; i < kImageRowsSub; ++i) {
-    for (int j = 0; j < kImageColsSub; ++j) {
-      ushort s = *(data + i * kImageColsSub + j);
-      img[i][j] = (s >> 13 | s << 3);
+  for (int i = 0; i < size; ++i) {
+    extrinsic m;
+    for (int d = 0; d < 3; ++d) {
+      int iret;
+      iret = fscanf(fp, "%f", &m.R[d][0]);
+      iret = fscanf(fp, "%f", &m.R[d][1]);
+      iret = fscanf(fp, "%f", &m.R[d][2]);
+      iret = fscanf(fp, "%f", &m.t[d]);
     }
+    poses->push_back(m);
   }
 
-  img.write(file_name.c_str());
+  fclose(fp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void DataSubSampling(uchar *i, uchar *i_sub, ushort *d, ushort *d_sub) {
-//  memcpy(i_sub, i, kImageRows * kImageCols * kImageChannels * sizeof(uchar));
-//  memcpy(d_sub, d, kImageRows * kImageCols * sizeof(ushort));
+void WritePlyHead(FILE *fp, int size) {
+  cout << "Write PLY head -->" << endl;
 
-  for (int i = 0; i < kImageRowsSub; ++i) {
-    for (int j = 0; j < kImageColsSub; ++j) {
-      *(d_sub + i * kImageColsSub + j) =
-          *(d + i * kSampleFactor * kImageCols + j * kSampleFactor);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-void WritePlyFile(const string file_name, uchar *image, ushort *depth) {
-  cout << file_name << endl;
-
-  FILE *fp = fopen(file_name.c_str(), "w");
   fprintf(fp, "ply\n");
   fprintf(fp, "format binary_little_endian 1.0\n");
-  fprintf(fp, "element vertex %d\n", kImageRows * kImageCols);
+  fprintf(fp, "element vertex %d\n", kImageRows * kImageCols * size);
   fprintf(fp, "property float x\n");
   fprintf(fp, "property float y\n");
   fprintf(fp, "property float z\n");
@@ -307,7 +301,12 @@ void WritePlyFile(const string file_name, uchar *image, ushort *depth) {
   fprintf(fp, "property uchar green\n");
   fprintf(fp, "property uchar blue\n");
   fprintf(fp, "end_header\n");
+}
 
+////////////////////////////////////////////////////////////////////////////////
+
+void WritePlyFile(FILE *fp,
+                  const extrinsic ex, uchar *image, ushort *depth) {
   for (int v = 0; v < kImageRows; ++v) {
     for (int u = 0; u < kImageCols; ++u) {
       float iz = *(depth + v * kImageCols + u) / 1000.f;
@@ -315,9 +314,9 @@ void WritePlyFile(const string file_name, uchar *image, ushort *depth) {
       float iy = iz * (v - cam_K.cy) / cam_K.fy;
 
       float x, y, z;
-      z = -iz;
-      x =  ix;
-      y = -iy;
+      x = ex.R[0][0] * ix + ex.R[0][1] * iy + ex.R[0][2] * iz + ex.t[0];
+      y = ex.R[1][0] * ix + ex.R[1][1] * iy + ex.R[1][2] * iz + ex.t[1];
+      z = ex.R[2][0] * ix + ex.R[2][1] * iy + ex.R[2][2] * iz + ex.t[2];
 
       fwrite(&x, sizeof(float), 1, fp);
       fwrite(&y, sizeof(float), 1, fp);
@@ -332,8 +331,51 @@ void WritePlyFile(const string file_name, uchar *image, ushort *depth) {
       fwrite(&b, sizeof(uchar), 1, fp);
     }
   }
+}
 
-  fclose(fp);
+////////////////////////////////////////////////////////////////////////////////
+
+int GetTimeStamp(const string &file_name) {
+  return atoi(file_name.substr(
+              file_name.size() - kFileNameLength + kTimeStampPos,
+              kTimeStampLength).c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void AssignDepthList(vector<string> image_list, vector<string> *depth_list) {
+  vector<string> depth_temp;
+  depth_temp.swap(*depth_list);
+  depth_list->clear();
+  depth_list->reserve(image_list.size());
+
+  int idx = 0;
+  int depth_time = GetTimeStamp(depth_temp[idx]);
+  int time_low = depth_time;
+
+
+  for (unsigned int i = 0; i < image_list.size(); ++i) {
+    int image_time = GetTimeStamp(image_list[i]);
+
+    while (depth_time < image_time) {
+      if (idx == depth_temp.size() - 1)
+        break;
+
+      time_low = depth_time;
+      depth_time = GetTimeStamp(depth_temp[++idx]);
+    }
+
+    if (idx == 0 && depth_time > image_time) {
+      depth_list->push_back(depth_temp[idx]);
+      continue;
+    }
+
+    if (abs(image_time - time_low) < abs(depth_time - image_time)) {
+      depth_list->push_back(depth_temp[idx-1]);
+    } else {
+      depth_list->push_back(depth_temp[idx]);
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -344,6 +386,7 @@ void DataLocalProcess(string local_dir) {
   string local_depth     = local_dir + "depth/";
   string local_ply       = local_dir + "ply/";
   string local_depth_sub = local_dir + "depthSub/";
+  string local_extrinsic = local_dir + "extrinsics/";
 
   SystemCommand( "mkdir -p " + local_ply);
   SystemCommand( "mkdir -p " + local_depth_sub);
@@ -357,11 +400,22 @@ void DataLocalProcess(string local_dir) {
   i_ret = fscanf(fp, "%f", &ff);
   i_ret = fscanf(fp, "%f", &cam_K.fy);
   i_ret = fscanf(fp, "%f", &cam_K.cy);
+  fclose(fp);
 
   vector<string> image_list;
   vector<string> depth_list;
+  vector<string> extrinsic_list;
+
   GetLocalFileNames(local_image, &image_list);
   GetLocalFileNames(local_depth, &depth_list);
+  GetLocalFileNames(local_extrinsic, &extrinsic_list);
+  AssignDepthList(image_list, &depth_list);
+
+  vector<extrinsic> extrinsic_poses;
+  GetExtrinsicData(
+      extrinsic_list[extrinsic_list.size() - 1],
+      image_list.size(),
+      &extrinsic_poses);
 
   int total_files = 0;
   image_list.size() < depth_list.size() ?
@@ -370,16 +424,17 @@ void DataLocalProcess(string local_dir) {
 
   uchar *image_data = (uchar *) malloc(
       kImageRows * kImageCols * kImageChannels * sizeof(uchar));
-  uchar *image_data_sub = (uchar *) malloc(
-      kImageRowsSub * kImageColsSub * kImageChannels * sizeof(uchar));
   ushort *depth_data = (ushort *) malloc(
       kImageRows * kImageCols * sizeof(ushort));
-  ushort *depth_data_sub = (ushort *) malloc(
-      kImageRowsSub * kImageColsSub * sizeof(ushort));
+
+  fp = fopen((local_dir + "ply/scene.ply").c_str(), "w");
+  WritePlyHead(fp, (int)image_list.size() / kSampleFactor);
 
   cout << "Write PLY file -->" << endl;
 
-  for (int i = 0; i < total_files; ++i) {
+  for (int i = 0; i < image_list.size(); i += kSampleFactor) {
+    cout << depth_list[i] << endl;
+
     GetImageData(image_list[i], image_data);
     GetDepthData(depth_list[i], depth_data);
 
@@ -389,15 +444,13 @@ void DataLocalProcess(string local_dir) {
         depth_serial_name.substr(0, kFileNameLength - 4) + ".ply";
     string depth_full_name_sub = local_depth_sub + depth_serial_name;
 
-//    DataSubSampling(image_data, image_data_sub, depth_data, depth_data_sub);
-//    SaveDepthFile(depth_full_name_sub, depth_data_sub);
-    WritePlyFile(ply_full_name, image_data, depth_data);
+    WritePlyFile(fp, extrinsic_poses[i], image_data, depth_data);
   }
+
+  fclose(fp);
 
   free(image_data);
   free(depth_data);
-  free(image_data_sub);
-  free(depth_data_sub);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -424,3 +477,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
