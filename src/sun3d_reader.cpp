@@ -383,7 +383,6 @@ void DataLocalProcess(string local_dir) {
   string local_extrinsic = local_dir + "extrinsics/";
 
   SystemCommand( "mkdir -p " + local_ply);
-  SystemCommand( "mkdir -p " + local_depth_sub);
 
   int i_ret;
   float ff;
