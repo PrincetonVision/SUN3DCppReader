@@ -113,7 +113,7 @@ void ServerToLocal( CURL *curl,
 
 void DataFromServerToLocal(const string &sequence_name,
                            const string &local_dir) {
-  string sun3d_path   = "http://sun3d.csail.mit.edu/data/" + sequence_name;
+  string sun3d_path   = "http://sun3d.cs.princeton.edu/data/" + sequence_name;
 
   string sun3d_camera = sun3d_path + "intrinsics.txt";
   string sun3d_image  = sun3d_path + "image/";
