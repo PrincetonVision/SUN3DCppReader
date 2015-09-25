@@ -113,7 +113,6 @@ void ServerToLocal( CURL *curl,
 
 void DataFromServerToLocal(const string &sequence_name,
                            const string &local_dir) {
-  //changed MIT server to Princeton one
   string sun3d_path   = "http://sun3d.cs.princeton.edu/data/" + sequence_name;
 
   string sun3d_camera = sun3d_path + "intrinsics.txt";
